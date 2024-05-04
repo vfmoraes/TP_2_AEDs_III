@@ -4,12 +4,20 @@ import aeds3.Arquivo;
 import aeds3.ArvoreBMais;
 import aeds3.HashExtensivel;
 import aeds3.ParIntInt;
+import aeds3.ListaInvertida;
 import entidades.Livro;
 
-public class ArquivoLivros extends Arquivo<Livro> {
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.io.File;
+import java.io.RandomAccessFile;
 
+public class ArquivoLivros extends Arquivo<Livro> {
+  ArrayList<String> stopWords_list;
+  ListaInvertida listaTitulos;
   HashExtensivel<ParIsbnId> indiceIndiretoISBN;
   ArvoreBMais<ParIntInt> relLivrosDaCategoria;
+
 
   public ArquivoLivros() throws Exception {
     super("livros", Livro.class.getConstructor());
@@ -19,7 +27,37 @@ public class ArquivoLivros extends Arquivo<Livro> {
         "dados/livros_isbn.hash_d.db",
         "dados/livros_isbn.hash_c.db");
     relLivrosDaCategoria = new ArvoreBMais<>(ParIntInt.class.getConstructor(), 4, "dados/livros_categorias.btree.db");
+    //Criação da lista invertida
+    listaTitulos = new ListaInvertida(10, "dados/dicionario.listainv.db", "dados/blocos.listainv.db");
 
+    //Criação da lista de stopwords
+    stopWords_list = new ArrayList<String>();
+    File FL = new File("dados/stopwords.txt");
+    RandomAccessFile RF = new RandomAccessFile(FL, "rw");
+    while(RF.getFilePointer() < RF.length()) {
+      stopWords_list.add(RF.readLine()); 
+    }
+    // for(String s : stopWords_list){ 
+    //   System.out.println("\n"+s+": "+s.length() );
+    //   for(int i=0; i< s.length(); i++){
+    //     System.out.println("Char ["+ i + "] = " + (int)s.charAt(i));
+    //   }
+    // }
+
+    RF.close();
+  }
+
+  //Função para descobrir se o arraylist possui a String
+  boolean isStopWord(String s){
+    // boolean estaContido = false;
+    // for(int i=0; i<stopWords_list.size(); i++){
+    //   if(stopWords_list.get(i).contains(s)){
+    //     estaContido = true;
+    //     i = stopWords_list.size();
+    //   }
+    // }
+    // return estaContido;
+    return stopWords_list.contains(s);
   }
 
   @Override
@@ -28,7 +66,76 @@ public class ArquivoLivros extends Arquivo<Livro> {
     obj.setID(id);
     indiceIndiretoISBN.create(new ParIsbnId(obj.getIsbn(), obj.getID()));
     relLivrosDaCategoria.create(new ParIntInt(obj.getIdCategoria(), obj.getID()));
+    
+    //---tratar string---//
+    String tratada = Normalizer.normalize(obj.getTitulo(), Normalizer.Form.NFD); 
+    tratada = tratada.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    tratada = tratada.toLowerCase();
+    
+    //---criar lista invertida---//
+    String[] splitted = tratada.split(" ");
+    for(int i=0; i<splitted.length; i++){
+      if(!isStopWord(splitted[i])){
+        listaTitulos.create(splitted[i], id);
+      }
+    }
+
     return id;
+  }
+
+  public Livro[] read(String name) throws Exception {
+    int posInicial = 0;
+    int[] IDs;
+    String[] splitted;
+    Livro[] livro;
+
+    splitted = name.split(" ");
+    if(splitted.length == 0) throw new Exception("Nome do livro vazio");
+    while(posInicial<splitted.length && isStopWord(splitted[posInicial++]));
+    IDs = listaTitulos.read(splitted[posInicial-1]);
+
+    name = Normalizer.normalize(name, Normalizer.Form.NFD); 
+    name = name.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    name = name.toLowerCase();
+
+    //Encontrar interceção entre toda a lista de Títulos
+    for(int i = posInicial; i<splitted.length; i++){
+      //Se existir IDs continua a verificação
+      if(IDs.length > 0 && !isStopWord(splitted[i])){
+        ArrayList<Integer> result = new ArrayList<Integer>();
+        int[] IDs_tmp = listaTitulos.read(splitted[i]);
+        
+        //Encontrar interceção entre IDs_tmp e IDs, armazenando em result
+        for(int j=0; j<IDs.length; j++){
+          boolean existeIntercessao = false;
+          for(int k=0; k<IDs_tmp.length; k++){
+            if(IDs[j] == IDs_tmp[k]){
+              existeIntercessao = true;
+              k = IDs_tmp.length;
+            }
+          }
+          if(existeIntercessao){
+            result.add(IDs[j]);
+          }
+        }
+
+        //Atualizar os IDs com os valores do arraylist result
+        IDs = new int[result.size()];
+        for(int j=0; j<result.size(); j++)
+          IDs[j] = result.get(j);
+        
+      //Se IDs estiver vazio encerra execução do for
+      } else if (IDs.length == 0){
+        i=splitted.length;
+      }
+    }
+
+    livro = new Livro[IDs.length];
+    for(int i=0; i<IDs.length; i++){
+      livro[i] = super.read(IDs[i]);
+    }
+
+    return livro;
   }
 
   public Livro readISBN(String isbn) throws Exception {

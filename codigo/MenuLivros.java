@@ -9,6 +9,7 @@
 // e da saída de dados de livros e das classes relacionadas.
 // -------------------------------------------------------
 
+import java.text.Normalizer;
 import java.text.NumberFormat;
 import java.util.Scanner;
 
@@ -88,6 +89,16 @@ public class MenuLivros {
             "\nTítulo: " + l.getTitulo() +
             "\nPreço: " + NumberFormat.getCurrencyInstance().format(l.getPreco()) +
             "\nCategoria: " + nomeCategoria);
+  }
+
+  public void mostraLivroArray(Livro[] l) throws Exception {
+    if(l.length != 0){
+      for(Livro lTmp : l){
+        mostraLivro(lTmp);
+      }
+    } else {
+      System.out.println("Nenhum livro encontrado");
+    }
   }
 
   // ---------------------
@@ -195,11 +206,14 @@ public class MenuLivros {
   // ---------------------
   // BUSCAR LIVRO
   // ---------------------
+  /* 
   public void buscarLivro() {
     String isbn;
     System.out.println("\n\n\nBOOKAEDS 1.0");
     System.out.println("------------");
     System.out.println("\n> Início > Livros > Busca");
+
+
     System.out.print("\nISBN: ");
     isbn = console.nextLine();
     if (isbn.length() == 0)
@@ -212,6 +226,36 @@ public class MenuLivros {
         return;
       }
       mostraLivro(l);
+    } catch (Exception e) {
+      System.out.println("Erro no acesso ao arquivo");
+      e.printStackTrace();
+    }
+  }
+  */
+  public void buscarLivro() {
+    String nome;
+    System.out.println("\n\n\nBOOKAEDS 1.0");
+    System.out.println("------------");
+    System.out.println("\n> Início > Livros > Busca");
+
+
+    System.out.print("\nNome: ");
+    nome = console.nextLine();
+    //tratar entrada
+    nome = Normalizer.normalize(nome, Normalizer.Form.NFD); 
+    nome = nome.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    nome = nome.toLowerCase();
+
+    if (nome.length() == 0)
+      return;
+
+    try {
+      Livro[] l = arqLivros.read(nome);
+      if (l == null) {
+        System.out.println("Livro não encontrado.");
+        return;
+      }
+      mostraLivroArray(l);
     } catch (Exception e) {
       System.out.println("Erro no acesso ao arquivo");
       e.printStackTrace();

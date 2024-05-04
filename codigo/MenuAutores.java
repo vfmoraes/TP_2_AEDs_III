@@ -106,7 +106,7 @@ public class MenuAutores {
   // INCLUIR_AUTOR
   // ---------------------
   public void incluirAutor() {
-
+    
     // Lê um nov autor, testando se todos os campos foram preenchidos
     Autor novoAutor;
     try {
