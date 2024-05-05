@@ -49,15 +49,21 @@ public class ArquivoLivros extends Arquivo<Livro> {
 
   //Função para descobrir se o arraylist possui a String
   boolean isStopWord(String s){
-    // boolean estaContido = false;
-    // for(int i=0; i<stopWords_list.size(); i++){
-    //   if(stopWords_list.get(i).contains(s)){
-    //     estaContido = true;
-    //     i = stopWords_list.size();
-    //   }
-    // }
-    // return estaContido;
     return stopWords_list.contains(s);
+  }
+
+  String tratarString(String s){
+    //remover caracteres especiais
+    for (int i = 33; i < 65; i++) {
+      s = s.replace("" + (char) i, "");
+    }
+
+    //tratando string titulo
+    s = Normalizer.normalize(s, Normalizer.Form.NFD); 
+    s = s.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    s = s.toLowerCase();
+
+    return s;
   }
 
   @Override
@@ -68,9 +74,7 @@ public class ArquivoLivros extends Arquivo<Livro> {
     relLivrosDaCategoria.create(new ParIntInt(obj.getIdCategoria(), obj.getID()));
     
     //---tratar string---//
-    String tratada = Normalizer.normalize(obj.getTitulo(), Normalizer.Form.NFD); 
-    tratada = tratada.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-    tratada = tratada.toLowerCase();
+    String tratada = tratarString(obj.getTitulo()); 
     
     //---criar lista invertida---//
     String[] splitted = tratada.split(" ");
@@ -83,20 +87,19 @@ public class ArquivoLivros extends Arquivo<Livro> {
     return id;
   }
 
-  public Livro[] read(String name) throws Exception {
+  public Livro[] read(String titulo) throws Exception {
     int posInicial = 0;
     int[] IDs;
     String[] splitted;
     Livro[] livro;
 
-    splitted = name.split(" ");
+    //tratar titulo
+    titulo = tratarString(titulo); 
+
+    splitted = titulo.split(" ");
     if(splitted.length == 0) throw new Exception("Nome do livro vazio");
     while(posInicial<splitted.length && isStopWord(splitted[posInicial++]));
     IDs = listaTitulos.read(splitted[posInicial-1]);
-
-    name = Normalizer.normalize(name, Normalizer.Form.NFD); 
-    name = name.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-    name = name.toLowerCase();
 
     //Encontrar interceção entre toda a lista de Títulos
     for(int i = posInicial; i<splitted.length; i++){
@@ -152,8 +155,21 @@ public class ArquivoLivros extends Arquivo<Livro> {
     if (obj != null)
       if (indiceIndiretoISBN.delete(ParIsbnId.hashIsbn(obj.getIsbn()))
           &&
-          relLivrosDaCategoria.delete(new ParIntInt(obj.getIdCategoria(), obj.getID())))
+          relLivrosDaCategoria.delete(new ParIntInt(obj.getIdCategoria(), obj.getID()))){
+        
+        String titulo = obj.getTitulo();
+        //tratando string titulo
+        titulo = tratarString(titulo); 
+        String[] splitted = titulo.split(" ");
+        //repetição para deletar o Título do dicionario de Títulos
+        for(int i=0; i<splitted.length; i++){
+          if(!isStopWord(splitted[i]))
+            listaTitulos.delete(splitted[i], id);
+          else 
+            System.out.println("StopWord");
+        }
         return super.delete(id);
+      }
     return false;
   }
 
@@ -174,8 +190,19 @@ public class ArquivoLivros extends Arquivo<Livro> {
         relLivrosDaCategoria.create(new ParIntInt(novoLivro.getIdCategoria(), novoLivro.getID()));
       }
 
+
+      String[] tituloAntigo = ( tratarString(livroAntigo.getTitulo()) ).split(" ");
+      String[] tituloNovo = ( tratarString(novoLivro.getTitulo()) ).split(" ");
+
+      for(int i=0; i<tituloAntigo.length; i++)
+          listaTitulos.delete(tituloAntigo[i], livroAntigo.getID());
+      for(int i=0; i<tituloNovo.length; i++)
+          listaTitulos.create(tituloNovo[i], novoLivro.getID());
+
+      boolean status = super.update(novoLivro);
+
       // Atualiza o livro
-      return super.update(novoLivro);
+      return status;
     }
     return false;
   }

@@ -102,7 +102,11 @@ public class Principal {
       arqLivros.create(new Livro("9788584290483", "Ensino Híbrido", 39.90F, 2));
       arqLivros.create(new Livro("9786559790005", "Modernidade Líquida", 48.1F, 3));
       arqLivros.create(new Livro("9788582714911", "Memória", 55.58F, 1));
-      arqLivros.create(new Livro("9786587150062", "Com Amor", 48.9F, 1));
+      arqLivros.create(new Livro("9786587150062", "Ciência da Computação", 48.9F, 1));
+      arqLivros.create(new Livro("9786587150063", "Ciência de Dados", 48.9F, 1));
+      arqLivros.create(new Livro("9786587150064", "Banco de Dados", 48.9F, 1));
+      arqLivros.create(new Livro("9786587150065", "Engenharia de Computação", 48.9F, 1));
+      arqLivros.create(new Livro("9786587150066", "Ciência e análise de Dados", 48.9F, 1));
 
       arqLivros.close();
       arqCategorias.close();

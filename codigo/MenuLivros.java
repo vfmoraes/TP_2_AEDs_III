@@ -34,6 +34,23 @@ public class MenuLivros {
   }
 
   // ---------------------
+  // Tratar entrada
+  // ---------------------
+  String tratarString(String s){
+    //remover caracteres especiais
+    for (int i = 33; i < 65; i++) {
+      s = s.replace("" + (char) i, "");
+    }
+
+    //tratando string titulo
+    s = Normalizer.normalize(s, Normalizer.Form.NFD); 
+    s = s.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    s = s.toLowerCase();
+
+    return s;
+  }
+
+  // ---------------------
   // LE_LIVRO
   // ---------------------
   public Livro leLivro() throws Exception {
@@ -92,7 +109,7 @@ public class MenuLivros {
   }
 
   public void mostraLivroArray(Livro[] l) throws Exception {
-    if(l.length != 0){
+    if(l != null && l.length != 0){
       for(Livro lTmp : l){
         mostraLivro(lTmp);
       }
@@ -241,10 +258,9 @@ public class MenuLivros {
 
     System.out.print("\nNome: ");
     nome = console.nextLine();
+    
     //tratar entrada
-    nome = Normalizer.normalize(nome, Normalizer.Form.NFD); 
-    nome = nome.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-    nome = nome.toLowerCase();
+    nome = tratarString(nome);
 
     if (nome.length() == 0)
       return;
